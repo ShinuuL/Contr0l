@@ -3,6 +3,12 @@ import MonthSelector from "./MonthSelector";
 import ExpensePieChart from "./ExpensePieChart";
 import CategoryBreakdown from "./CategoryBreakdown";
 import { buildChartSlices } from "./chartData";
+import ScreenHeader, {
+  SCREEN_SECTION_CLASS,
+} from "../../components/ui/ScreenHeader";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import {
   monthlyTotalsByCategory,
   listTransactionsByMonth,
@@ -14,6 +20,8 @@ import type { CategoryTotal, TransactionWithCategory } from "../../lib/types";
 import { useTheme } from "../theme/ThemeProvider";
 import { BalanceMoodCard } from "./BalanceMoodCard";
 import { DashboardSummaryCards } from "./DashboardSummaryCards";
+
+const TITLE_ID = "dashboard-title";
 
 export default function DashboardScreen() {
   const { resolvedTheme } = useTheme();
@@ -82,39 +90,26 @@ export default function DashboardScreen() {
   const hasData = transactions.length > 0;
 
   return (
-    <section className="space-y-6 p-4 md:p-8" aria-labelledby="dashboard-title">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="dashboard-title"
-          className="text-xl font-semibold tracking-tight"
-        >
-          Resumo
-        </h2>
-        <MonthSelector year={year} month={month} onChange={handleMonthChange} />
-      </div>
+    <section className={SCREEN_SECTION_CLASS} aria-labelledby={TITLE_ID}>
+      <ScreenHeader
+        id={TITLE_ID}
+        title="Resumo"
+        toolbar={
+          <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+        }
+      />
 
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
+      {error && <ErrorBanner message={error} />}
 
-      {!error && loading && (
-        <p className="text-sm text-muted-foreground" aria-busy="true">
-          Carregando…
-        </p>
-      )}
+      {!error && loading && <LoadingState />}
 
       {!error && !loading && !hasData && (
         <>
           {resolvedTheme === "strawberry" && <BalanceMoodCard realizedCents={0} />}
-          <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          <EmptyState>
             Nenhuma movimentação em {formatMonthLabel(year, month)}. Adicione sua
             primeira transação na aba Transações.
-          </div>
+          </EmptyState>
         </>
       )}
 

@@ -3,6 +3,12 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import Modal from "../../components/ui/Modal";
+import ScreenHeader, {
+  SCREEN_SECTION_CLASS,
+} from "../../components/ui/ScreenHeader";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import MonthSelector from "../dashboard/MonthSelector";
 import { formatBRL, formatCentsInput, parseToCents } from "../../lib/currency";
 import {
@@ -20,6 +26,8 @@ import { useTheme } from "../theme/ThemeProvider";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-2 focus:outline-ring";
+
+const TITLE_ID = "categories-title";
 
 type FormState =
   | { mode: "create" }
@@ -98,47 +106,31 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <section
-      className="space-y-6 p-4 md:p-8"
-      aria-labelledby="categories-title"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="categories-title"
-          className="text-xl font-semibold tracking-tight"
-        >
-          Categorias
-        </h2>
-        <Button onClick={() => setFormState({ mode: "create" })}>
-          <Plus className="size-4" aria-hidden />
-          Nova categoria
-        </Button>
-      </div>
-      <MonthSelector
-        year={year}
-        month={month}
-        onChange={(nextYear, nextMonth) => {
-          setYear(nextYear);
-          setMonth(nextMonth);
-        }}
+    <section className={SCREEN_SECTION_CLASS} aria-labelledby={TITLE_ID}>
+      <ScreenHeader
+        id={TITLE_ID}
+        title="Categorias"
+        action={
+          <Button onClick={() => setFormState({ mode: "create" })}>
+            <Plus className="size-4" aria-hidden />
+            Nova categoria
+          </Button>
+        }
+        toolbar={
+          <MonthSelector
+            year={year}
+            month={month}
+            onChange={(nextYear, nextMonth) => {
+              setYear(nextYear);
+              setMonth(nextMonth);
+            }}
+          />
+        }
       />
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
-      {!error && loading && (
-        <p className="text-sm text-muted-foreground" aria-busy="true">
-          Carregando…
-        </p>
-      )}
+      {error && <ErrorBanner message={error} />}
+      {!error && loading && <LoadingState />}
       {!error && !loading && categories.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Nenhuma categoria cadastrada.
-        </div>
+        <EmptyState>Nenhuma categoria cadastrada.</EmptyState>
       )}
       {!error && !loading && categories.length > 0 && (
         <ul className="space-y-3" aria-label="Categorias e orçamentos">

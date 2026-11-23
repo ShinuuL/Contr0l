@@ -9,6 +9,12 @@ import { FileUp, LoaderCircle, Plus } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import ScreenHeader, {
+  SCREEN_SECTION_CLASS,
+} from "../../components/ui/ScreenHeader";
+import EmptyState from "../../components/ui/EmptyState";
+import LoadingState from "../../components/ui/LoadingState";
+import ErrorBanner from "../../components/ui/ErrorBanner";
 import MonthSelector from "../dashboard/MonthSelector";
 import ImportStatementModal from "../imports/ImportStatementModal";
 import {
@@ -51,6 +57,8 @@ type FormState =
 
 const selectClass =
   "h-11 w-full max-w-56 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-2 focus:outline-ring";
+
+const TITLE_ID = "transactions-title";
 
 function signColor(cents: number): string {
   if (cents > 0) return "text-success";
@@ -216,48 +224,61 @@ export default function TransactionsScreen() {
   const summary = calculateMonthlyResult(transactions);
 
   return (
-    <section
-      className="space-y-6 p-4 md:p-8"
-      aria-labelledby="transactions-title"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2
-          id="transactions-title"
-          className="text-xl font-semibold tracking-tight"
-        >
-          Movimentações
-        </h2>
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".csv,text/csv,.pdf,application/pdf"
-            className="hidden"
-            aria-label="Selecionar extrato da conta em CSV (Itaú ou Nubank) ou em PDF"
-            onChange={(event) => void handleImportFile(event)}
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            className="whitespace-nowrap"
-            disabled={importState.kind === "parsing"}
-            onClick={() => importInputRef.current?.click()}
-          >
-            {importState.kind === "parsing" ? (
-              <LoaderCircle className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <FileUp className="size-4" aria-hidden />
-            )}
-            {importState.kind === "parsing"
-              ? "Lendo extrato…"
-              : "Importar extrato"}
-          </Button>
-          <Button onClick={() => setFormState({ mode: "create" })}>
-            <Plus className="size-4" aria-hidden />
-            Adicionar
-          </Button>
-        </div>
-      </div>
+    <section className={SCREEN_SECTION_CLASS} aria-labelledby={TITLE_ID}>
+      <ScreenHeader
+        id={TITLE_ID}
+        title="Movimentações"
+        action={
+          <>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,text/csv,.pdf,application/pdf"
+              className="hidden"
+              aria-label="Selecionar extrato da conta em CSV (Itaú ou Nubank) ou em PDF"
+              onChange={(event) => void handleImportFile(event)}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              className="whitespace-nowrap"
+              disabled={importState.kind === "parsing"}
+              onClick={() => importInputRef.current?.click()}
+            >
+              {importState.kind === "parsing" ? (
+                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+              ) : (
+                <FileUp className="size-4" aria-hidden />
+              )}
+              {importState.kind === "parsing"
+                ? "Lendo extrato…"
+                : "Importar extrato"}
+            </Button>
+            <Button onClick={() => setFormState({ mode: "create" })}>
+              <Plus className="size-4" aria-hidden />
+              Adicionar
+            </Button>
+          </>
+        }
+        toolbar={
+          <>
+            <MonthSelector year={year} month={month} onChange={handleMonthChange} />
+            <select
+              aria-label="Filtrar por categoria"
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className={selectClass}
+            >
+              <option value="all">Todas as categorias</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </>
+        }
+      />
 
       {importState.kind === "parsing" && (
         <p
@@ -270,45 +291,12 @@ export default function TransactionsScreen() {
       )}
 
       {importState.kind === "error" && !importState.preview && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive"
-        >
-          {importState.message}
-        </p>
+        <ErrorBanner message={importState.message} />
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <MonthSelector year={year} month={month} onChange={handleMonthChange} />
-        <select
-          aria-label="Filtrar por categoria"
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className={selectClass}
-        >
-          <option value="all">Todas as categorias</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {error && <ErrorBanner message={error} />}
 
-      {error && (
-        <p
-          role="alert"
-          className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive"
-        >
-          {error}
-        </p>
-      )}
-
-      {!error && loading && (
-        <p className="text-sm text-muted-foreground" aria-busy="true">
-          Carregando…
-        </p>
-      )}
+      {!error && loading && <LoadingState />}
 
       {!error && !loading && (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -344,24 +332,23 @@ export default function TransactionsScreen() {
       )}
 
       {!error && !loading && filtered.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          {filterCategory === "all" ? (
-            <>
-              Nenhuma movimentação em {formatMonthLabel(year, month)}.
-              <br />
+        <EmptyState
+          action={
+            filterCategory === "all" ? (
               <Button
                 variant="ghost"
-                className="mt-3"
                 onClick={() => setFormState({ mode: "create" })}
               >
                 <Plus className="size-4" aria-hidden />
                 Adicionar a primeira
               </Button>
-            </>
-          ) : (
-            `Nenhuma movimentação nessa categoria em ${formatMonthLabel(year, month)}.`
-          )}
-        </div>
+            ) : undefined
+          }
+        >
+          {filterCategory === "all"
+            ? `Nenhuma movimentação em ${formatMonthLabel(year, month)}.`
+            : `Nenhuma movimentação nessa categoria em ${formatMonthLabel(year, month)}.`}
+        </EmptyState>
       )}
 
       {!error && !loading && filtered.length > 0 && (

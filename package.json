@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
+    "validate": "node scripts/validate.mjs",
     "tauri": "tauri",
     "android:release": "tauri android build --apk && node scripts/prepare-apk.mjs",
     "windows:release": "tauri build && node scripts/prepare-exe.mjs"

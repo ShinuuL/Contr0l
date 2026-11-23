@@ -17,7 +17,13 @@ export default function Sidebar({ active, onSelect, conta, onConta }: SidebarPro
       <div className="flex h-16 items-center px-6">
         <h1 className="wordmark text-lg">Contr0l</h1>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Navegação principal">
+      {/* `overflow-y-auto` porque a lista cresce: com mais abas (Relatórios,
+          Contas fixas) o menu rola em vez de empurrar o rodapé de conta para
+          fora da janela. */}
+      <nav
+        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"
+        aria-label="Navegação principal"
+      >
         {TAB_DEFS.map((tab) => (
           <SidebarItem
             key={tab.id}

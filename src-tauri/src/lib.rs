@@ -5,10 +5,13 @@ mod session_store;
 #[allow(dead_code)]
 mod crypto;
 mod imports;
+mod instalador;
+mod mcp;
 mod migrations;
 mod recovery;
-mod instalador;
 mod update;
+
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -26,6 +29,14 @@ pub fn run() {
             cloud::aplicar_restauracao_pendente(app.handle());
             // Depois da restauracao: o banco que vale e o que acabou de entrar.
             recovery::curar_carimbo_sem_efeito(app.handle());
+            match tauri::async_runtime::block_on(mcp::start(app.handle())) {
+                Ok(runtime) => {
+                    app.manage(runtime);
+                }
+                Err(err) => {
+                    eprintln!("MCP local não iniciado: {err}");
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -48,6 +59,13 @@ pub fn run() {
             instalador::instalador_abrir,
             recovery::repair_database
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                if let Some(runtime) = app_handle.try_state::<mcp::McpRuntime>() {
+                    runtime.shutdown();
+                }
+            }
+        });
 }

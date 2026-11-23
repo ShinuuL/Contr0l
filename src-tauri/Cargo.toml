@@ -33,6 +33,10 @@ sha2 = "0.10"
 # rustls em vez do TLS do sistema: o mesmo binario vale para desktop e Android,
 # sem depender de openssl instalado.
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rmcp = { version = "3", features = ["transport-streamable-http-server"] }
+axum = "0.8"
+tokio = { version = "1", features = ["net"] }
+tokio-util = "0.7"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
