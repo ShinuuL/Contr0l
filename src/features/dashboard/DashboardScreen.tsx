@@ -108,7 +108,7 @@ export default function DashboardScreen() {
           {resolvedTheme === "strawberry" && <BalanceMoodCard realizedCents={0} />}
           <EmptyState>
             Nenhuma movimentação em {formatMonthLabel(year, month)}. Adicione sua
-            primeira transação na aba Transações.
+            primeira movimentação na aba Movimentações.
           </EmptyState>
         </>
       )}
@@ -122,25 +122,27 @@ export default function DashboardScreen() {
             strawberry={resolvedTheme === "strawberry"}
           />
 
-          <section
-            className="rounded-lg border border-border bg-surface p-5"
-            aria-labelledby="chart-title"
-          >
-            <h3 id="chart-title" className="mb-4 text-sm font-medium">
-              Saídas por categoria
-            </h3>
-            <ExpensePieChart slices={slices} totalCents={expensesTotalCents} />
-          </section>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <section
+              className="rounded-lg border border-border bg-surface p-5"
+              aria-labelledby="chart-title"
+            >
+              <h3 id="chart-title" className="mb-4 text-sm font-medium">
+                Saídas por categoria
+              </h3>
+              <ExpensePieChart slices={slices} totalCents={expensesTotalCents} />
+            </section>
 
-          <section
-            className="rounded-lg border border-border bg-surface p-5"
-            aria-labelledby="breakdown-title"
-          >
-            <h3 id="breakdown-title" className="mb-3 text-sm font-medium">
-              Detalhamento
-            </h3>
-            <CategoryBreakdown totals={totals} />
-          </section>
+            <section
+              className="rounded-lg border border-border bg-surface p-5"
+              aria-labelledby="breakdown-title"
+            >
+              <h3 id="breakdown-title" className="mb-3 text-sm font-medium">
+                Detalhamento
+              </h3>
+              <CategoryBreakdown totals={totals} />
+            </section>
+          </div>
         </>
       )}
     </section>

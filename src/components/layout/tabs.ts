@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type TabId = "dashboard" | "transactions" | "categories" | "reports";
+export type TabId = "dashboard" | "transactions" | "categories";
 
 export interface TabDef {
   id: TabId;

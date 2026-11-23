@@ -133,7 +133,7 @@ export async function updateTransaction(
       params,
     );
     if (result.rowsAffected !== 1) {
-      throw new Error("Transação não encontrada.");
+      throw new Error("Movimentação não encontrada.");
     }
   });
 }
@@ -143,7 +143,7 @@ export async function deleteTransaction(id: string): Promise<void> {
     const db = await getDb();
     const result = await db.execute("DELETE FROM expenses WHERE id = $1", [id]);
     if (result.rowsAffected !== 1) {
-      throw new Error("Transação não encontrada.");
+      throw new Error("Movimentação não encontrada.");
     }
   });
 }

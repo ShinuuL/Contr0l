@@ -476,7 +476,7 @@ describe("transaction repository", () => {
 
       await expect(
         updateTransaction("missing", { description: "x" }),
-      ).rejects.toThrow("Transação não encontrada.");
+      ).rejects.toThrow("Movimentação não encontrada.");
     });
 
     it("does not touch the database when no field is supplied", async () => {
@@ -513,7 +513,7 @@ describe("transaction repository", () => {
       getDb.mockResolvedValue(fake.db);
 
       await expect(deleteTransaction("missing")).rejects.toThrow(
-        "Transação não encontrada.",
+        "Movimentação não encontrada.",
       );
     });
   });

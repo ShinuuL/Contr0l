@@ -45,3 +45,7 @@ src-tauri/gen/android/keystore.properties
 extrato/
 src/assets/WhatsApp Image*.jpeg
 bugreport-*.zip
+
+# Artefatos locais de validação visual/Playwright
+.impeccable/
+.playwright-mcp/

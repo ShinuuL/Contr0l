@@ -4,6 +4,9 @@ mod session_store;
 // chamado no passo do backup; ate la o dead_code seria ruido, nao aviso.
 #[allow(dead_code)]
 mod crypto;
+#[cfg(debug_assertions)]
+mod dev_tools;
+mod gemini;
 mod imports;
 mod instalador;
 mod mcp;
@@ -39,26 +42,63 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            cloud::cloud_signup,
-            cloud::cloud_login,
-            cloud::cloud_logout,
-            cloud::cloud_sessao,
-            cloud::cloud_entitlement,
-            cloud::cloud_backup_push,
-            cloud::cloud_backup_pull,
-            cloud::cloud_backup_auto,
-            cloud::cloud_apagar_conta,
-            imports::confirm_statement_import,
-            recovery::diagnose_database,
-            update::atualizacao_verificar,
-            update::atualizacao_dispensar,
-            update::atualizacao_baixar,
-            instalador::instalador_permissao,
-            instalador::instalador_pedir_permissao,
-            instalador::instalador_abrir,
-            recovery::repair_database
-        ])
+        .invoke_handler({
+            #[cfg(debug_assertions)]
+            {
+                tauri::generate_handler![
+                    cloud::cloud_signup,
+                    cloud::cloud_login,
+                    cloud::cloud_logout,
+                    cloud::cloud_sessao,
+                    cloud::cloud_entitlement,
+                    cloud::cloud_backup_push,
+                    cloud::cloud_backup_pull,
+                    cloud::cloud_backup_auto,
+                    cloud::cloud_apagar_conta,
+                    imports::confirm_statement_import,
+                    recovery::diagnose_database,
+                    update::atualizacao_verificar,
+                    update::atualizacao_dispensar,
+                    update::atualizacao_baixar,
+                    instalador::instalador_permissao,
+                    instalador::instalador_pedir_permissao,
+                    instalador::instalador_abrir,
+                    recovery::repair_database,
+                    gemini::gemini_configurar_chave,
+                    gemini::gemini_remover_chave,
+                    gemini::gemini_tem_chave,
+                    gemini::gemini_analisar_cupom,
+                    dev_tools::dev_capture_window
+                ]
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                tauri::generate_handler![
+                    cloud::cloud_signup,
+                    cloud::cloud_login,
+                    cloud::cloud_logout,
+                    cloud::cloud_sessao,
+                    cloud::cloud_entitlement,
+                    cloud::cloud_backup_push,
+                    cloud::cloud_backup_pull,
+                    cloud::cloud_backup_auto,
+                    cloud::cloud_apagar_conta,
+                    imports::confirm_statement_import,
+                    recovery::diagnose_database,
+                    update::atualizacao_verificar,
+                    update::atualizacao_dispensar,
+                    update::atualizacao_baixar,
+                    instalador::instalador_permissao,
+                    instalador::instalador_pedir_permissao,
+                    instalador::instalador_abrir,
+                    recovery::repair_database,
+                    gemini::gemini_configurar_chave,
+                    gemini::gemini_remover_chave,
+                    gemini::gemini_tem_chave,
+                    gemini::gemini_analisar_cupom
+                ]
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app_handle, event| {

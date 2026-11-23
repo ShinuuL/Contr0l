@@ -5,7 +5,7 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import { FileUp, LoaderCircle, Plus } from "lucide-react";
+import { Camera, FileUp, LoaderCircle, Plus } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
@@ -17,6 +17,7 @@ import LoadingState from "../../components/ui/LoadingState";
 import ErrorBanner from "../../components/ui/ErrorBanner";
 import MonthSelector from "../dashboard/MonthSelector";
 import ImportStatementModal from "../imports/ImportStatementModal";
+import GeminiCupomModal from "../gemini/GeminiCupomModal";
 import {
   confirmImportPreview,
   prepareImportPreview,
@@ -82,6 +83,7 @@ export default function TransactionsScreen() {
     useState<TransactionWithCategory | null>(null);
   const [importState, setImportState] = useState<ImportState>({ kind: "idle" });
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [cupomOpen, setCupomOpen] = useState(false);
 
   const load = useCallback(async (nextYear: number, nextMonth: number) => {
     setLoading(true);
@@ -142,7 +144,7 @@ export default function TransactionsScreen() {
       await load(year, month);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Erro ao excluir transação.",
+        err instanceof Error ? err.message : "Erro ao excluir movimentação.",
       );
     }
   };
@@ -238,6 +240,15 @@ export default function TransactionsScreen() {
               aria-label="Selecionar extrato da conta em CSV (Itaú ou Nubank) ou em PDF"
               onChange={(event) => void handleImportFile(event)}
             />
+            <Button
+              type="button"
+              variant="secondary"
+              className="whitespace-nowrap"
+              onClick={() => setCupomOpen(true)}
+            >
+              <Camera className="size-4" aria-hidden />
+              Foto de cupom
+            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -383,7 +394,7 @@ export default function TransactionsScreen() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Excluir transação"
+        title="Excluir movimentação"
         message={
           deleteTarget
             ? `Excluir "${deleteTarget.description || "movimentação sem descrição"}" de ${formatDateBR(deleteTarget.date)}? Esta ação não pode ser desfeita.`
@@ -410,6 +421,18 @@ export default function TransactionsScreen() {
           onClose={closeImport}
         />
       )}
+
+      <GeminiCupomModal
+        open={cupomOpen}
+        categories={categories}
+        onClose={() => setCupomOpen(false)}
+        onCreate={async (values) => {
+          await createTransaction(values);
+        }}
+        onSaved={async () => {
+          await load(year, month);
+        }}
+      />
     </section>
   );
 }
