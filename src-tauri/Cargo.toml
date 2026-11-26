@@ -1,6 +1,6 @@
 [package]
 name = "controle-de-gastos"
-version = "0.1.0"
+version = "0.5.7"
 description = "Controle de Gastos - expense tracker"
 authors = ["you"]
 edition = "2021"
