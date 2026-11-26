@@ -25,6 +25,7 @@ Estado atual registrado após validação local em 2026-11-23, com rodada de imp
 - [x] O gateway já servia a 0.5.6 (publicada às 14:04Z), mas o código foi alterado depois daquele build. Sobrescrever a 0.5.6 não entregaria a atualização a quem já a instalou; por isso a nova release é 0.5.7.
 - [x] Checklist de release após o bump de versão: `npm test` (43 arquivos, 307 testes), `npm run lint`, `npm run build` (inclui typecheck), `npm audit --omit=dev --audit-level=high` (0 vulnerabilidades), `cargo check` e `git diff --check` — OK.
 - [x] Artefatos 0.5.7 gerados com `npm run windows:release` e `npm run android:release`; `tauri.properties` registra `versionName=0.5.7` e `versionCode=5007`.
+- [x] Publicação conferida: tag `contr0l-v0.5.7` aberta com APK e EXE; `/v1/apps/contr0l/latest` serve `0.5.7` com assinatura válida (2 artefatos) e sha256 dos arquivos locais igual ao do gateway. `deploybase verify` recebeu 403 com o User-Agent padrão do Python; a verificação foi refeita com User-Agent `curl/8` e `signing.verify_envelope`.
 
 ## Pendente
 
@@ -54,8 +55,8 @@ Estado atual registrado após validação local em 2026-11-23, com rodada de imp
 - [ ] **Acompanhar warnings LF/CRLF no Windows:** `git diff --check` sem erros; apenas warnings de LF/CRLF em arquivos Rust.
 - [ ] **Acompanhar warnings de linker Cargo no Windows:** mensagens `Criando biblioteca ... .dll.lib/.exp` aparecem durante testes/build; não bloqueiam.
 - [x] **Checklist de release completo (SECURITY.md):** rodado e registrado na seção “Validado em 2026-11-26 (release 0.5.7)”.
-- [ ] **Push do commit de release:** publicar `main` no remoto antes de criar a tag da release; o `gh release create` aponta a tag para o HEAD remoto, não para o commit local.
-- [ ] **Publicação da 0.5.7 no gateway:** criar a release com os dois artefatos e conferir `/v1/apps/contr0l/latest`.
+- [x] **Push do commit de release:** `f9eead1` confirmado em `origin/main` via `git ls-remote`; sem isso a tag da release apontaria para o commit antigo.
+- [x] **Publicação da 0.5.7 no gateway:** release aberta e manifesto assinado conferido na seção “Validado em 2026-11-26 (release 0.5.7)”.
 - [ ] **Fallback da landing page desatualizado:** `landing/index.html` ainda aponta para a 0.5.5; alinhar com a versão publicada.
 
 ## Melhorias encontradas na varredura (2026-11-26)
