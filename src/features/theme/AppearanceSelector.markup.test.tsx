@@ -3,12 +3,13 @@ import { describe, expect, test } from "vitest";
 import { AppearanceSelector } from "./AppearanceSelector";
 
 describe("AppearanceSelector", () => {
-  test("expõe apenas os três temas escolhíveis", () => {
+  test("expõe os quatro temas escolhíveis", () => {
     const markup = renderToStaticMarkup(<AppearanceSelector />);
 
     for (const label of [
       "Claro",
       "Escuro",
+      "Noturno",
       "Moranguinho",
     ]) {
       expect(markup).toContain(label);

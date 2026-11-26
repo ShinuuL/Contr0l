@@ -235,35 +235,43 @@ export default function TransactionsScreen() {
             <input
               ref={importInputRef}
               type="file"
-              accept=".csv,text/csv,.pdf,application/pdf"
+              accept=".csv,text/csv,.pdf,application/pdf,.ofx,application/ofx,application/x-ofx,application/octet-stream,text/plain,text/xml,application/xml,*/*"
               className="hidden"
-              aria-label="Selecionar extrato da conta em CSV (Itaú ou Nubank) ou em PDF"
+              aria-label="Selecionar extrato da conta em CSV (Itaú ou Nubank), PDF ou OFX"
               onChange={(event) => void handleImportFile(event)}
             />
             <Button
               type="button"
               variant="secondary"
-              className="whitespace-nowrap"
+              className="w-12 px-0"
               onClick={() => setCupomOpen(true)}
+              aria-label="Foto de cupom"
+              title="Foto de cupom"
             >
-              <Camera className="size-4" aria-hidden />
-              Foto de cupom
+              <Camera className="size-5" aria-hidden />
             </Button>
             <Button
               type="button"
               variant="secondary"
-              className="whitespace-nowrap"
+              className="w-12 px-0"
               disabled={importState.kind === "parsing"}
               onClick={() => importInputRef.current?.click()}
+              aria-label={
+                importState.kind === "parsing"
+                  ? "Lendo extrato…"
+                  : "Importar extrato"
+              }
+              title={
+                importState.kind === "parsing"
+                  ? "Lendo extrato…"
+                  : "Importar extrato"
+              }
             >
               {importState.kind === "parsing" ? (
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-5 animate-spin" aria-hidden />
               ) : (
-                <FileUp className="size-4" aria-hidden />
+                <FileUp className="size-5" aria-hidden />
               )}
-              {importState.kind === "parsing"
-                ? "Lendo extrato…"
-                : "Importar extrato"}
             </Button>
             <Button onClick={() => setFormState({ mode: "create" })}>
               <Plus className="size-4" aria-hidden />

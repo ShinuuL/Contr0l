@@ -1,6 +1,6 @@
 export const THEME_STORAGE_KEY = "controle-gastos.theme-preference";
 
-const THEME_PREFERENCES = ["light", "dark", "strawberry"] as const;
+const THEME_PREFERENCES = ["light", "dark", "night", "strawberry"] as const;
 
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
 export type ResolvedTheme = ThemePreference;

@@ -1,25 +1,23 @@
 import { motion } from "motion/react";
-import { UserRound } from "lucide-react";
-import { AppearanceSelector } from "../../features/theme/AppearanceSelector";
+import { Settings, UserRound } from "lucide-react";
 import { TAB_DEFS, type TabDef, type TabId } from "./tabs";
+import appIcon from "../../assets/app-icon.png";
 
 interface SidebarProps {
   active: TabId;
   onSelect: (id: TabId) => void;
-  /** Rotulo do botao de conta: e-mail quando conectado, "Conta" quando nao. */
   conta: string;
   onConta: () => void;
+  onSettings: () => void;
 }
 
-export default function Sidebar({ active, onSelect, conta, onConta }: SidebarProps) {
+export default function Sidebar({ active, onSelect, conta, onConta, onSettings }: SidebarProps) {
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-surface">
-      <div className="flex h-16 items-center px-6">
-        <h1 className="wordmark text-lg">Contr0l</h1>
+      <div className="flex h-16 items-center gap-2 px-6">
+        <img src={appIcon} alt="Contr0l" className="size-8 rounded-lg" />
+        <span className="wordmark text-lg">Contr0l</span>
       </div>
-      {/* `overflow-y-auto` porque a lista cresce: com mais abas (Relatórios,
-          Contas fixas) o menu rola em vez de empurrar o rodapé de conta para
-          fora da janela. */}
       <nav
         className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"
         aria-label="Navegação principal"
@@ -34,8 +32,14 @@ export default function Sidebar({ active, onSelect, conta, onConta }: SidebarPro
         ))}
       </nav>
       <div className="flex flex-col gap-2 border-t border-border p-3">
-        {/* Conta e um botao no rodape, nao uma aba: o app abre e funciona sem
-            ela, e quem nunca cadastrar nunca precisa ver isto. */}
+        <button
+          type="button"
+          onClick={onSettings}
+          className="flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <Settings className="size-5 shrink-0" aria-hidden />
+          <span>Configurações</span>
+        </button>
         <button
           type="button"
           onClick={onConta}
@@ -44,7 +48,6 @@ export default function Sidebar({ active, onSelect, conta, onConta }: SidebarPro
           <UserRound className="size-5 shrink-0" aria-hidden />
           <span className="truncate">{conta}</span>
         </button>
-        <AppearanceSelector />
       </div>
     </aside>
   );

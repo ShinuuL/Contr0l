@@ -1,4 +1,4 @@
-import { Cherry, Moon, Palette, Sun } from "lucide-react";
+import { Cherry, Moon, MoonStar, Palette, Sun } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useTheme } from "./ThemeProvider";
@@ -11,6 +11,7 @@ const OPTIONS: Array<{
 }> = [
   { value: "light", label: "Claro", Icon: Sun },
   { value: "dark", label: "Escuro", Icon: Moon },
+  { value: "night", label: "Noturno", Icon: MoonStar },
   { value: "strawberry", label: "Moranguinho", Icon: Cherry },
 ];
 

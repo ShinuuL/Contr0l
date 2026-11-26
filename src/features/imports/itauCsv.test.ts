@@ -94,7 +94,7 @@ describe("parseItauCsv com o extrato exportado pelo app do Itaú", () => {
     "data;lancamentos;valor (R$);saldo (R$)",
     "27/08/2026;SALDO DO DIA;;-49,71",
     "26/08/2026;PAY ATACA 26/08;-8,45;",
-    "20/08/2026;SISPAG PIX MASTERSYS GESTAO ...;120,00;",
+    "20/08/2026;SISPAG PIX LANCAMENTO ... ...;120,00;",
     "07/08/2026;PIX TRANSF MASTERS07/08;1.525,42;",
     "04/08/2026;IOF;-0,37;",
   ].join("\n");
@@ -105,7 +105,7 @@ describe("parseItauCsv com o extrato exportado pelo app do Itaú", () => {
     expect(parsed.issues).toEqual([]);
     expect(parsed.rows).toEqual([
       { sourceRow: 3, date: "2026-08-26", description: "PAY ATACA 26/08", amount_cents: 845, nature: "saida" },
-      { sourceRow: 4, date: "2026-08-20", description: "SISPAG PIX MASTERSYS GESTAO ...", amount_cents: 12000, nature: "entrada" },
+      { sourceRow: 4, date: "2026-08-20", description: "SISPAG PIX LANCAMENTO ... ...", amount_cents: 12000, nature: "entrada" },
       { sourceRow: 5, date: "2026-08-07", description: "PIX TRANSF MASTERS07/08", amount_cents: 152542, nature: "entrada" },
       { sourceRow: 6, date: "2026-08-04", description: "IOF", amount_cents: 37, nature: "saida" },
     ]);

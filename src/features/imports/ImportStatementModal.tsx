@@ -10,17 +10,20 @@ import {
   CircleHelp,
   CirclePlus,
   Copy,
+  Search,
   X,
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import Button from "../../components/ui/Button";
+import CategoryPicker from "./CategoryPicker";
 import { useBackGuard } from "../../lib/navigation/backGuard";
-import { formatSignedBRL } from "../../lib/currency";
+import { formatBRL, formatSignedBRL } from "../../lib/currency";
 import { formatDateBR } from "../../lib/date";
 import type { ApprovedImportLine, Category } from "../../lib/types";
 import type { CsvIssue, ParsedNature, ParsedStatementRow } from "./itauCsv";
 import {
   dayDistance,
+  normalizeDescription,
   reconciliationKey,
   type ReconciliationCandidate,
   type ReconciliationResult,
@@ -71,15 +74,68 @@ function normalizeCategoryName(value: string): string {
     .toLowerCase();
 }
 
-function categoryIdsByName(
-  categories: ReadonlyArray<Pick<Category, "id" | "name">>,
-): Map<string, string> {
-  return new Map(
-    categories.map((category) => [
-      normalizeCategoryName(category.name),
-      category.id,
-    ]),
-  );
+type MatchableCategory = Pick<Category, "id" | "name"> &
+  Partial<Pick<Category, "is_preset">>;
+
+/**
+ * Slug derivado do nome. Não é campo do banco (a tabela `categories` não tem
+ * slug): é uma chave estável calculada na leitura, para casar "CAFÉ-DA-MANHÃ"
+ * com a categoria "Café da Manhã" sem depender de acento ou pontuação.
+ */
+export function categorySlug(value: string): string {
+  return normalizeCategoryName(value)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+interface CategoryMatch {
+  id: string;
+  preset: boolean;
+}
+
+function categoryIndexes(categories: ReadonlyArray<MatchableCategory>) {
+  const byName = new Map<string, CategoryMatch>();
+  const bySlug = new Map<string, CategoryMatch>();
+  const register = (
+    index: Map<string, CategoryMatch>,
+    key: string,
+    category: MatchableCategory,
+  ) => {
+    if (!key) return;
+    const current = index.get(key);
+    const preset = category.is_preset === true;
+    // Empate de slug: a categoria que o usuário criou vale mais que a nossa.
+    if (!current || (current.preset && !preset)) {
+      index.set(key, { id: category.id, preset });
+    }
+  };
+
+  for (const category of categories) {
+    register(byName, normalizeCategoryName(category.name), category);
+    register(bySlug, categorySlug(category.name), category);
+  }
+  return { byName, bySlug };
+}
+
+/**
+ * Predefine a categoria sem criar nada: testa a categoria sugerida pelo extrato
+ * e, se ela não vier, a própria descrição do lançamento. Só aceita casamento
+ * exato de nome ou slug -- se não casar, quem decide é o usuário na prévia.
+ */
+export function resolveSuggestedCategoryId(
+  suggestedName: string | undefined,
+  description: string,
+  categories: ReadonlyArray<MatchableCategory>,
+): string {
+  const { byName, bySlug } = categoryIndexes(categories);
+  for (const candidate of [suggestedName, description]) {
+    if (!candidate) continue;
+    const exact = byName.get(normalizeCategoryName(candidate));
+    if (exact) return exact.id;
+    const slug = bySlug.get(categorySlug(candidate));
+    if (slug) return slug.id;
+  }
+  return "";
 }
 
 /**
@@ -92,20 +148,19 @@ function categoryIdsByName(
  * primeira da lista, que ja vem ordenada por predefinidas primeiro.
  */
 export function resolveFallbackCategoryId(
-  categories: ReadonlyArray<Pick<Category, "id" | "name">>,
+  categories: ReadonlyArray<MatchableCategory>,
 ): string {
   const outros = categories.find(
-    (category) => normalizeCategoryName(category.name) === "outros",
+    (category) => categorySlug(category.name) === "outros",
   );
   return outros?.id ?? categories[0]?.id ?? "";
 }
 
 export function createInitialImportReview(
   result: ReconciliationResult,
-  categories: ReadonlyArray<Pick<Category, "id" | "name">>,
+  categories: ReadonlyArray<MatchableCategory>,
   fallbackCategoryId = "",
 ): ImportReviewLine[] {
-  const categoryByName = categoryIdsByName(categories);
   const reviewLine = (
     row: ImportReviewLine["row"],
     group: ReviewGroup,
@@ -113,10 +168,12 @@ export function createInitialImportReview(
     row,
     group,
     decision: group === "new" ? "import" : "pending",
-    categoryId: row.suggestedCategoryName
-      ? (categoryByName.get(normalizeCategoryName(row.suggestedCategoryName)) ??
-        fallbackCategoryId)
-      : fallbackCategoryId,
+    categoryId:
+      resolveSuggestedCategoryId(
+        row.suggestedCategoryName,
+        row.description,
+        categories,
+      ) || fallbackCategoryId,
     nature: row.nature,
   });
 
@@ -128,16 +185,17 @@ export function createInitialImportReview(
 
 export function syncSuggestedCategories(
   review: ImportReviewLine[],
-  categories: ReadonlyArray<Pick<Category, "id" | "name">>,
+  categories: ReadonlyArray<MatchableCategory>,
 ): ImportReviewLine[] {
-  const categoryByName = categoryIdsByName(categories);
   const fallbackCategoryId = resolveFallbackCategoryId(categories);
   return review.map((item) => {
     if (item.categoryId) return item;
-    const suggested = item.row.suggestedCategoryName
-      ? categoryByName.get(normalizeCategoryName(item.row.suggestedCategoryName))
-      : undefined;
-    const categoryId = suggested ?? fallbackCategoryId;
+    const categoryId =
+      resolveSuggestedCategoryId(
+        item.row.suggestedCategoryName,
+        item.row.description,
+        categories,
+      ) || fallbackCategoryId;
     return categoryId ? { ...item, categoryId } : item;
   });
 }
@@ -230,12 +288,12 @@ function SummaryCard({
   count: number;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-background p-3 sm:p-4">
-      <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-        <Icon className="size-4 shrink-0" aria-hidden />
-        <span>{label}</span>
-      </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums">{count}</p>
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-background px-3 py-2.5">
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <Icon className="size-3.5 shrink-0" aria-hidden />
+        {label}
+      </span>
+      <span className="text-lg font-semibold tabular-nums">{count}</span>
     </div>
   );
 }
@@ -274,51 +332,37 @@ function ReadOnlyRow({
 }
 
 function BulkActions({
-  group,
   categories,
   disabled,
   onApply,
 }: {
-  group: ReviewGroup;
   categories: Category[];
   disabled: boolean;
   onApply: (changes: Partial<ImportReviewLine>) => void;
 }) {
-  const selectId = `${group}-bulk-category`;
   const [bulkCategoryId, setBulkCategoryId] = useState("");
 
   return (
-    <div className="rounded-xl border border-border bg-background p-4">
-      <p className="text-sm font-medium">Aplicar a todas as linhas desta aba</p>
-      <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
-        <div className="sm:col-span-1">
-          <label htmlFor={selectId} className="sr-only">
-            Categoria para todas as linhas desta aba
-          </label>
-          <select
-            id={selectId}
-            value={bulkCategoryId}
-            disabled={disabled}
-            onChange={(event) => {
-              const categoryId = event.target.value;
-              setBulkCategoryId(categoryId);
-              if (categoryId) onApply({ categoryId });
-            }}
-            className={inputClass}
-          >
-            <option value="">Definir categoria de todas…</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="rounded-xl border border-border bg-surface p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">
+        Aplicar a todas as linhas desta aba
+      </p>
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <CategoryPicker
+          value={bulkCategoryId}
+          categories={categories}
+          disabled={disabled}
+          label="Categoria para todas as linhas desta aba"
+          onChange={(categoryId) => {
+            setBulkCategoryId(categoryId);
+            onApply({ categoryId });
+          }}
+        />
         <Button
           type="button"
-          variant="ghost"
+          variant="secondary"
           disabled={disabled}
-          className="whitespace-nowrap"
+          className="h-10 whitespace-nowrap px-3"
           onClick={() => onApply({ decision: "import" })}
         >
           Importar todas
@@ -327,7 +371,7 @@ function BulkActions({
           type="button"
           variant="ghost"
           disabled={disabled}
-          className="whitespace-nowrap"
+          className="h-10 whitespace-nowrap px-3"
           onClick={() => onApply({ decision: "ignore" })}
         >
           Ignorar todas
@@ -358,21 +402,30 @@ function ReviewRow({
     item.nature === "saida" ? -item.row.amount_cents : item.row.amount_cents;
 
   return (
-    <article className="rounded-xl border border-border bg-background p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate font-medium">{item.row.description}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+    <article
+      data-import-row={controlId}
+      className={`rounded-xl border bg-background p-3 sm:p-4 ${
+        importing ? "border-border" : "border-border/60 opacity-75"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{item.row.description}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
             Linha {item.row.sourceRow} · {formatDateBR(item.row.date)}
           </p>
         </div>
-        <p className="font-semibold tabular-nums">
+        <p
+          className={`whitespace-nowrap text-sm font-semibold tabular-nums ${
+            item.nature === "entrada" ? "text-success" : "text-foreground"
+          }`}
+        >
           {formatSignedBRL(signedAmount)}
         </p>
       </div>
 
       {item.row.existing && (
-        <div className="mt-3 rounded-lg border border-warning/40 bg-surface p-3 text-sm">
+        <div className="mt-2 rounded-lg border border-warning/40 bg-surface p-2.5 text-xs">
           <p className="font-medium">Já existe uma movimentação parecida</p>
           <p className="mt-1 text-muted-foreground">
             {item.row.existing.description} · {formatDateBR(item.row.existing.date)} ·{" "}
@@ -389,75 +442,62 @@ function ReviewRow({
         </div>
       )}
 
-      <fieldset className="mt-4">
-        <legend className="mb-2 text-sm font-medium">
-          {item.group === "conflict" ? "Decisão obrigatória" : "Incluir na importação"}
-        </legend>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            aria-pressed={item.decision === "import"}
-            onClick={() => onChange({ decision: "import" })}
-            className={`h-11 whitespace-nowrap rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-              item.decision === "import"
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border text-muted-foreground hover:bg-surface hover:text-foreground"
-            }`}
-          >
-            Importar
-          </button>
-          <button
-            type="button"
-            aria-pressed={item.decision === "ignore"}
-            onClick={() => onChange({ decision: "ignore" })}
-            className={`h-11 whitespace-nowrap rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-              item.decision === "ignore"
-                ? "border-foreground bg-foreground text-background"
-                : "border-border text-muted-foreground hover:bg-surface hover:text-foreground"
-            }`}
-          >
-            Ignorar
-          </button>
-        </div>
-      </fieldset>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <fieldset>
+          <legend className="sr-only">
+            {item.group === "conflict" ? "Decisão obrigatória" : "Incluir na importação"}
+          </legend>
+          <div className="inline-flex rounded-lg border border-control-border bg-surface p-0.5">
+            <button
+              type="button"
+              aria-pressed={item.decision === "import"}
+              onClick={() => onChange({ decision: "import" })}
+              className={`h-9 rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                item.decision === "import"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Importar
+            </button>
+            <button
+              type="button"
+              aria-pressed={item.decision === "ignore"}
+              onClick={() => onChange({ decision: "ignore" })}
+              className={`h-9 rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
+                item.decision === "ignore"
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Ignorar
+            </button>
+          </div>
+        </fieldset>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <div>
-          <label
-            htmlFor={`${controlId}-category`}
-            className="mb-1 block text-sm font-medium"
-          >
-            Categoria
-          </label>
-          <select
-            id={`${controlId}-category`}
+        <div className="min-w-[10rem] flex-1">
+          <CategoryPicker
             value={item.categoryId}
+            categories={categories}
             disabled={!importing}
-            onChange={(event) => onChange({ categoryId: event.target.value })}
-            className={inputClass}
-          >
-            <option value="">Selecione uma categoria</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+            label={`Categoria de ${item.row.description}`}
+            onChange={(categoryId) => onChange({ categoryId })}
+          />
         </div>
 
         <fieldset
           disabled={!importing}
           className={!importing ? "text-muted-foreground" : undefined}
         >
-          <legend className="mb-1 text-sm font-medium">Natureza</legend>
-          <div className="grid grid-cols-2 rounded-lg border border-control-border bg-surface p-1">
+          <legend className="sr-only">Natureza</legend>
+          <div className="inline-flex rounded-lg border border-control-border bg-surface p-0.5">
             {(["entrada", "saida"] as const).map((nature) => (
               <button
                 key={nature}
                 type="button"
                 aria-pressed={item.nature === nature}
                 onClick={() => onChange({ nature })}
-                className={`h-11 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:text-muted-foreground ${
+                className={`h-9 rounded-md px-2 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:text-muted-foreground ${
                   item.nature === nature
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -493,6 +533,7 @@ export default function ImportStatementModal({
   const [activeTab, setActiveTab] = useState<ReviewTab>(() =>
     getInitialReviewTab(result, issues),
   );
+  const [query, setQuery] = useState("");
   const [review, setReview] = useState(() =>
     createInitialImportReview(
       result,
@@ -501,6 +542,10 @@ export default function ImportStatementModal({
     ),
   );
   const status = getImportReviewStatus(review);
+  const normalizedQuery = normalizeDescription(query);
+  const matchesQuery = (text: string): boolean =>
+    normalizedQuery === "" ||
+    normalizeDescription(text).includes(normalizedQuery);
 
   // Enquanto grava não dá para desistir pelo voltar, como o Cancelar e o X.
   useBackGuard(open && !submitting, onClose);
@@ -527,6 +572,9 @@ export default function ImportStatementModal({
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !submitting) {
+        // O seletor de categoria vive em portal e trata o próprio Escape. Sem
+        // isso, fechar a lista também fechava a prévia e perdia a revisão.
+        if (document.querySelector('[data-category-picker-open="true"]')) return;
         event.preventDefault();
         onClose();
         return;
@@ -595,6 +643,28 @@ export default function ImportStatementModal({
       : status.importCount === 0
         ? "Escolha ao menos uma movimentação para importar."
         : `${status.importCount} movimenta${status.importCount === 1 ? "ção pronta" : "ções prontas"} para importar.`;
+
+  const selectedLines = review.filter((item) => item.decision === "import");
+  const totalIn = selectedLines
+    .filter((item) => item.nature === "entrada")
+    .reduce((sum, item) => sum + item.row.amount_cents, 0);
+  const totalOut = selectedLines
+    .filter((item) => item.nature === "saida")
+    .reduce((sum, item) => sum + item.row.amount_cents, 0);
+
+  const filteredReview = review.filter((item) =>
+    matchesQuery(
+      `${item.row.description} ${item.row.date} ${item.row.sourceRow} ${item.row.amount_cents}`,
+    ),
+  );
+  const filteredDuplicates = result.duplicates.filter((row) =>
+    matchesQuery(
+      `${row.description} ${row.date} ${row.sourceRow} ${row.amount_cents}`,
+    ),
+  );
+  const filteredIssues = issues.filter((issue) =>
+    matchesQuery(`${issue.message} ${issue.sourceRow}`),
+  );
 
   const overlay = (
     <div
@@ -678,8 +748,29 @@ export default function ImportStatementModal({
               ))}
             </div>
 
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-label="Buscar movimentações por descrição, data ou linha"
+                placeholder="Buscar por descrição, data ou linha…"
+                className={`${inputClass} pl-9`}
+              />
+            </div>
+
             {tabs.map((tab) => {
-              const tabReview = review.filter((item) => item.group === tab);
+              const tabReview = filteredReview.filter((item) => item.group === tab);
+              const visibleCount =
+                tab === "new" || tab === "conflict"
+                  ? tabReview.length
+                  : tab === "duplicate"
+                    ? filteredDuplicates.length
+                    : filteredIssues.length;
               return (
                 <section
                   key={tab}
@@ -692,7 +783,6 @@ export default function ImportStatementModal({
                 >
                   {(tab === "new" || tab === "conflict") && tabReview.length > 0 && (
                     <BulkActions
-                      group={tab}
                       categories={categories}
                       disabled={submitting}
                       onApply={(changes) => applyBulk(tab, changes)}
@@ -710,7 +800,7 @@ export default function ImportStatementModal({
                       />
                     ))}
                   {tab === "duplicate" &&
-                    result.duplicates.map((row) => (
+                    filteredDuplicates.map((row) => (
                       <ReadOnlyRow
                         key={row.sourceRow}
                         row={row}
@@ -719,7 +809,7 @@ export default function ImportStatementModal({
                       />
                     ))}
                   {tab === "issue" &&
-                    issues.map((issue) => (
+                    filteredIssues.map((issue) => (
                       <article
                         key={`${issue.sourceRow}-${issue.message}`}
                         className="rounded-xl border border-destructive/30 bg-background p-4"
@@ -741,9 +831,11 @@ export default function ImportStatementModal({
                         </div>
                       </article>
                     ))}
-                  {counts[tab] === 0 && (
+                  {visibleCount === 0 && (
                     <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                      Nenhuma linha neste grupo.
+                      {normalizedQuery
+                        ? "Nenhuma linha corresponde à busca."
+                        : "Nenhuma linha neste grupo."}
                     </div>
                   )}
                 </section>
@@ -752,6 +844,26 @@ export default function ImportStatementModal({
           </div>
 
           <footer className="sticky bottom-0 border-t border-border bg-surface/95 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:px-6 sm:pb-4">
+            <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-border bg-background px-3 py-2 text-xs tabular-nums">
+              <span className="text-muted-foreground">
+                Entradas{" "}
+                <strong className="ml-1 font-semibold text-success">
+                  {formatBRL(totalIn)}
+                </strong>
+              </span>
+              <span className="text-muted-foreground">
+                Saídas{" "}
+                <strong className="ml-1 font-semibold text-foreground">
+                  −{formatBRL(totalOut)}
+                </strong>
+              </span>
+              <span className="text-muted-foreground">
+                Saldo{" "}
+                <strong className="ml-1 font-semibold text-foreground">
+                  {formatSignedBRL(totalIn - totalOut)}
+                </strong>
+              </span>
+            </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p
                 id={`${descriptionId}-status`}

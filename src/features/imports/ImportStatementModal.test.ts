@@ -7,9 +7,11 @@ import type {
 import {
   applyBulkChanges,
   buildApprovedImportLines,
+  categorySlug,
   createInitialImportReview,
   getInitialReviewTab,
   getImportReviewStatus,
+  resolveFallbackCategoryId,
   syncSuggestedCategories,
 } from "./ImportStatementModal";
 
@@ -65,6 +67,48 @@ describe("revisão da importação de extrato", () => {
       "food",
       "",
       "",
+    ]);
+  });
+
+  it("casa por slug, inclusive com categoria personalizada do usuário", () => {
+    const categories = [
+      { id: "custom-coffee", name: "Café da Manhã", is_preset: false },
+      { id: "custom-pharmacy", name: "farmacia", is_preset: false },
+      { id: "other", name: "Outros", is_preset: true },
+    ];
+    const review = createInitialImportReview(
+      result({
+        newRows: [
+          row(2, { suggestedCategoryName: "CAFÉ-DA-MANHÃ" }),
+          row(3, { description: "Farmácia" }),
+          row(4, { description: "PIX QRS ALGAR" }),
+        ],
+      }),
+      categories,
+      resolveFallbackCategoryId(categories),
+    );
+
+    expect(review.map(({ categoryId }) => categoryId)).toEqual([
+      "custom-coffee",
+      "custom-pharmacy",
+      "other",
+    ]);
+  });
+
+  it("prefere a categoria do usuário quando duas geram o mesmo slug", () => {
+    const categories = [
+      { id: "preset", name: "Transporte", is_preset: true },
+      { id: "custom", name: "transporte ", is_preset: false },
+    ];
+    const review = createInitialImportReview(
+      result({ newRows: [row(2, { suggestedCategoryName: "TRANSPORTE" })] }),
+      categories,
+    );
+
+    expect(review[0].categoryId).toBe("custom");
+    expect(categories.map((category) => categorySlug(category.name))).toEqual([
+      "transporte",
+      "transporte",
     ]);
   });
 

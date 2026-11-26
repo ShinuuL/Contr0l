@@ -47,6 +47,30 @@
   color-scheme: dark;
 }
 
+/* Noturno: fundo cinza, card mais escuro que o fundo e contorno branco.
+   Os tokens de texto foram escolhidos para manter contraste sobre #0D0D10
+   (o texto do tema "dark", por exemplo, nao atinge 4,5:1 no pill "Realizada"). */
+:root[data-theme="night"] {
+  --background: #151519;
+  --surface: #0d0d10;
+  --foreground: #ececf1;
+  --muted-foreground: #a1a1aa;
+  --border: #ffffff;
+  --control-border: #71717a;
+  --primary: #7aa2f7;
+  --primary-foreground: #0d0d10;
+  --secondary: #b4befe;
+  --accent: #9ece6a;
+  --accent-foreground: #0d0d10;
+  --destructive: #f7768e;
+  --destructive-foreground: #0d0d10;
+  --success: #9ece6a;
+  --warning: #e0af68;
+  --danger: #f7768e;
+  --ring: #7aa2f7;
+  color-scheme: dark;
+}
+
 :root[data-theme="strawberry"] {
   --background: #F2CBD1;
   --surface: #FFFCFD;

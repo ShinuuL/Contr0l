@@ -73,7 +73,7 @@ describe("parseItauPdfLines", () => {
     const parsed = parseItauPdfLines(
       groupPdfLines([
         [
-          ...line(600, { date: "20/08/2026", description: "SISPAG PIX MASTERSYS GESTAO ...", amount: "120,00" }),
+          ...line(600, { date: "20/08/2026", description: "SISPAG PIX LANCAMENTO ... ...", amount: "120,00" }),
           ...line(580, { date: "20/08/2026", description: "PIX QRS KATATAUS LA20/08", amount: "-48,00" }),
           ...line(560, { date: "07/08/2026", description: "PIX TRANSF MASTERS07/08", amount: "1.525,42" }),
         ],
@@ -82,7 +82,7 @@ describe("parseItauPdfLines", () => {
 
     expect(parsed.issues).toEqual([]);
     expect(parsed.rows).toEqual([
-      { sourceRow: 1, date: "2026-08-20", description: "SISPAG PIX MASTERSYS GESTAO ...", amount_cents: 12000, nature: "entrada" },
+      { sourceRow: 1, date: "2026-08-20", description: "SISPAG PIX LANCAMENTO ... ...", amount_cents: 12000, nature: "entrada" },
       { sourceRow: 2, date: "2026-08-20", description: "PIX QRS KATATAUS LA20/08", amount_cents: 4800, nature: "saida" },
       { sourceRow: 3, date: "2026-08-07", description: "PIX TRANSF MASTERS07/08", amount_cents: 152542, nature: "entrada" },
     ]);

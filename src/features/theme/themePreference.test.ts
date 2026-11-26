@@ -13,6 +13,7 @@ describe("theme preference", () => {
 
   test("reads a valid stored preference", () => {
     expect(readThemePreference({ getItem: () => "strawberry" })).toBe("strawberry");
+    expect(readThemePreference({ getItem: () => "night" })).toBe("night");
   });
 
   test("persists the preference under the theme storage key", () => {
@@ -39,5 +40,6 @@ describe("theme preference", () => {
     expect(resolveTheme("light")).toBe("light");
     expect(resolveTheme("dark")).toBe("dark");
     expect(resolveTheme("strawberry")).toBe("strawberry");
+    expect(resolveTheme("night")).toBe("night");
   });
 });

@@ -1,5 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import type { ChartSlice } from "./chartData";
 import { formatBRL } from "../../lib/currency";
 
@@ -52,6 +52,7 @@ export default function ExpensePieChart({
   slices,
   totalCents,
 }: ExpensePieChartProps) {
+  const reduceMotion = useReducedMotion();
   if (slices.length === 0 || totalCents === 0) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -97,6 +98,9 @@ export default function ExpensePieChart({
             paddingAngle={slices.length > 1 ? 2 : 0}
             stroke="none"
             label={percentLabel}
+            isAnimationActive={!reduceMotion}
+            animationDuration={500}
+            animationEasing="ease-out"
           >
             {slices.map((slice) => (
               <Cell key={slice.name} fill={slice.color} />
@@ -111,9 +115,9 @@ export default function ExpensePieChart({
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <motion.span
           key={totalCents}
-          initial={{ opacity: 0, y: 6 }}
+          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
+          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           className="text-2xl font-semibold tracking-tight"
         >
           {formatBRL(totalCents)}

@@ -1,4 +1,5 @@
 import type { CsvIssue, ParsedStatement } from "./itauCsv";
+import { parseStatementOfx } from "./ofx";
 import { parseStatementPdf } from "./statementPdf";
 import { parseStatementCsv } from "./statementCsv";
 import type { ReconciliationResult } from "./reconciliation";
@@ -62,14 +63,23 @@ function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-export type ImportFileKind = "csv" | "pdf";
+export type ImportFileKind = "csv" | "pdf" | "ofx";
 
 export function importFileKind(file: {
   name: string;
   type: string;
 }): ImportFileKind {
-  return file.type === "application/pdf" ||
-    file.name.toLowerCase().endsWith(".pdf")
+  const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
+  if (
+    name.endsWith(".ofx") ||
+    type === "application/x-ofx" ||
+    type === "application/ofx" ||
+    type.includes("ofx")
+  ) {
+    return "ofx";
+  }
+  return file.type === "application/pdf" || name.endsWith(".pdf")
     ? "pdf"
     : "csv";
 }
@@ -79,7 +89,11 @@ async function parseImportBytes(
   kind: ImportFileKind,
 ): Promise<ParsedStatement> {
   const parsed =
-    kind === "pdf" ? await parseStatementPdf(bytes) : parseStatementCsv(bytes);
+    kind === "pdf"
+      ? await parseStatementPdf(bytes)
+      : kind === "ofx"
+        ? parseStatementOfx(bytes)
+        : parseStatementCsv(bytes);
   const reviewSizeError = validateImportReviewSize(
     parsed.rows.length + parsed.issues.length,
   );
@@ -227,15 +241,22 @@ export function validateImportFileType(file: {
   type: string;
 }): string | null {
   const name = file.name.toLowerCase();
+  const type = file.type.toLowerCase();
   const supported =
     name.endsWith(".csv") ||
     name.endsWith(".pdf") ||
-    file.type === "text/csv" ||
-    file.type === "application/pdf";
+    name.endsWith(".ofx") ||
+    type === "text/csv" ||
+    type === "application/pdf" ||
+    type === "application/x-ofx" ||
+    type === "application/ofx" ||
+    type.includes("ofx") ||
+    type === "text/xml" ||
+    type === "application/xml";
 
   return supported
     ? null
-    : "Formato não suportado. Importe o extrato da conta em CSV (Itaú ou Nubank) ou em PDF.";
+    : "Formato não suportado. Importe o extrato da conta em CSV (Itaú ou Nubank), PDF ou OFX.";
 }
 
 export function validateImportReviewSize(rowCount: number): string | null {

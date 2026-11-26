@@ -3,6 +3,7 @@ import type { StatementImportPreview } from "./importController";
 import {
   canConfirmImport,
   confirmImportPreview,
+  importFileKind,
   MAX_IMPORT_FILE_BYTES,
   MAX_IMPORT_REVIEW_ROWS,
   prepareImportPreview,
@@ -233,11 +234,19 @@ describe("controlador da importação na tela de movimentações", () => {
     ).toBeNull();
   });
 
-  it("recusa formatos que não são extrato do Itaú", () => {
+  it("aceita OFX para a prévia", () => {
     expect(
       validateImportFileType({ name: "extrato.ofx", type: "application/x-ofx" }),
+    ).toBeNull();
+    expect(importFileKind({ name: "extrato.ofx", type: "" })).toBe("ofx");
+    expect(importFileKind({ name: "extrato", type: "application/ofx" })).toBe("ofx");
+  });
+
+  it("recusa formatos que não são extrato", () => {
+    expect(
+      validateImportFileType({ name: "extrato.xlsx", type: "application/vnd.ms-excel" }),
     ).toBe(
-      "Formato não suportado. Importe o extrato da conta em CSV (Itaú ou Nubank) ou em PDF.",
+      "Formato não suportado. Importe o extrato da conta em CSV (Itaú ou Nubank), PDF ou OFX.",
     );
   });
 
